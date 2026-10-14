@@ -1,14 +1,17 @@
 [project]
 name = "nace-kit"
-version = "0.2.0"
-description = "Community toolkit for the nace.ai Drex API: multi-key client with caching and metering, presets, CLI and MCP server"
+version = "0.3.0"
+description = "Community toolkit for the nace.ai Drex API: multi-key client with caching and metering, typed questions/answers, presets, CLI, MCP server and document pipeline"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.27",
     "mcp>=1.2",
 ]
+
+[project.optional-dependencies]
+docs = ["nace-sdk>=0.1.0"]
 
 [project.urls]
 Repository = "https://github.com/lincong1987/nace-kit"
@@ -20,7 +23,7 @@ nace-kit = "nace_kit.cli:main"
 nace-kit-mcp = "nace_kit.mcp_server:main"
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "nace-sdk>=0.1.0"]
 
 [build-system]
 requires = ["hatchling"]

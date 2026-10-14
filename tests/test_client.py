@@ -16,6 +16,7 @@ from nace_kit.client import (
     normalize_questions,
 )
 from nace_kit import presets
+from nace_kit.types import Choice, Noul, NoulCriteria, Score
 
 UPSTREAM_OK = {
     "model": "drex-latest",
@@ -107,7 +108,7 @@ class TestKeyValidation:
 
     def test_check_keys_false_allows_fakes(self):
         client = NaceClient(keys=["k1"], check_keys=False, transport=make_transport(ok_json, []))
-        assert client.classify("x", presets.urgency())["request_id"] == "req_test"
+        assert client.classify("x", presets.urgency()).request_id == "req_test"
 
 
 class TestFailover:
@@ -122,11 +123,11 @@ class TestFailover:
 
         client = NaceClient(keys=["dead", "live"], check_keys=False, transport=make_transport(responder, seen))
         result = client.classify("text", presets.urgency())
-        assert result["answers"]["is_urgent"]["noul"] == 0.7161
+        assert result.answers["is_urgent"].noul == 0.7161
         assert len(seen) == 2
         assert seen[0].headers["Authorization"] == "Bearer dead"
         assert seen[1].headers["Authorization"] == "Bearer live"
-        assert "latency_ms" in result
+        assert result.latency_ms is not None
         assert client.usage[client.hint("live")]["calls"] == 1
         assert client.usage[client.hint("dead")]["calls"] == 0
 
@@ -183,7 +184,7 @@ class TestRetries:
             transport=make_transport(responder, seen),
         )
         result = client.classify("text", presets.urgency())
-        assert result["request_id"] == "req_test"
+        assert result.request_id == "req_test"
         assert len(seen) == 2
         assert seen[0].headers["Authorization"] == seen[1].headers["Authorization"] == "Bearer k1"
 
@@ -202,7 +203,7 @@ class TestRetries:
             transport=make_transport(responder, seen),
         )
         result = client.classify("text", presets.urgency())
-        assert result["request_id"] == "req_test"
+        assert result.request_id == "req_test"
         assert len(seen) == 4  # 3 failed attempts on k1, 1 on k2
         assert seen[0].headers["Authorization"] == "Bearer k1"
         assert seen[3].headers["Authorization"] == "Bearer k2"
@@ -257,9 +258,9 @@ class TestModels:
 
         client = NaceClient(keys=["k1"], check_keys=False, transport=make_transport(responder, seen))
         result = client.models()
-        assert [m["name"] for m in result["models"]] == ["drex-v2.0", "drex-latest"]
-        assert result["models"][1]["alias_for"] == "drex-v2.0"
-        assert "latency_ms" in result
+        assert [m.name for m in result.models] == ["drex-v2.0", "drex-latest"]
+        assert result.models[1].alias_for == "drex-v2.0"
+        assert result.latency_ms is not None
         assert seen[0].url.path == "/v1/models"
 
 
@@ -272,9 +273,9 @@ class TestCache:
         assert r1 == r2
         assert len(seen) == 1
         # mutating a returned result must not poison the cache
-        r1["answers"]["is_urgent"]["noul"] = 999
+        r1.answers["is_urgent"].noul = 999.0
         r3 = client.classify("same text", presets.urgency())
-        assert r3["answers"]["is_urgent"]["noul"] == 0.7161
+        assert r3.answers["is_urgent"].noul == 0.7161
 
     def test_different_state_misses_cache(self):
         seen: list[httpx.Request] = []
@@ -294,29 +295,29 @@ class TestCache:
 class TestPresets:
     def test_shapes(self):
         u = presets.urgency()
-        assert u["type"] == "noul" and u["name"] == "is_urgent"
+        assert u.type == "noul" and u.name == "is_urgent"
         s = presets.severity()
-        assert s["type"] == "score"
-        assert s["criteria"] == ["minor", "moderate", "major", "critical"]
-        assert presets.sentiment()["criteria"] == ["negative", "neutral", "positive"]
+        assert s.type == "score"
+        assert s.criteria == ["minor", "moderate", "major", "critical"]
+        assert presets.sentiment().criteria == ["negative", "neutral", "positive"]
 
     def test_noul_criteria(self):
         q = presets.noul("Refund?", true="wants money back", false="no refund request")
-        assert q["criteria"] == {"true": "wants money back", "false": "no refund request"}
-        assert "criteria" not in presets.noul("Refund?")
+        assert q.criteria == NoulCriteria(true="wants money back", false="no refund request")
+        assert presets.noul("Refund?").criteria is None
 
     def test_choice_mapping_format(self):
         q = presets.choice(
             "What is this about?",
             {"billing": "payment issues", "technical": None},
         )
-        assert q["type"] == "choice"
-        assert q["criteria"] == {"billing": "payment issues", "technical": None}
+        assert q.type == "choice"
+        assert q.criteria == {"billing": "payment issues", "technical": None}
 
     def test_priority_preset(self):
         p = presets.priority()
-        assert p["type"] == "choice"
-        assert set(p["criteria"]) == {"low", "medium", "high", "urgent"}
+        assert p.type == "choice"
+        assert set(p.criteria) == {"low", "medium", "high", "urgent"}
 
 
 class TestAsync:
@@ -338,7 +339,7 @@ class TestAsync:
             return r1, r2
 
         r1, r2 = asyncio.run(run())
-        assert r1["request_id"] == "req_test"
+        assert r1.request_id == "req_test"
         assert r2 == r1
         assert len(seen) == 2  # 429 rotate + first real call; cache serves the rest
 
@@ -354,4 +355,4 @@ class TestAsync:
             return await client.models()
 
         result = asyncio.run(run())
-        assert len(result["models"]) == 2
+        assert len(result.models) == 2

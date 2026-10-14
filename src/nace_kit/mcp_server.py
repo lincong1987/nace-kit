@@ -1,7 +1,8 @@
-"""MCP server exposing nace.ai classification as agent tools (stdio transport).
+"""MCP server exposing nace.ai classification and documents as agent tools.
 
 Run with ``nace-kit-mcp`` (or ``uv --directory <path> run nace-kit-mcp``).
-API keys come from the ``NACE_API_KEYS`` environment variable.
+API keys come from the ``NACE_API_KEYS`` environment variable. The document
+tools need the optional extra: ``pip install "nace-kit[docs]"``.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from . import presets
 mcp = _Server("nace")
 
 _client: NaceClient | None = None
+_docs: Any = None  # DocsClient, created lazily on first document call
 
 
 def _get_client() -> NaceClient:
@@ -27,6 +29,20 @@ def _get_client() -> NaceClient:
     if _client is None:
         _client = NaceClient()
     return _client
+
+
+def _get_docs() -> Any:
+    global _docs
+    if _docs is None:
+        from .docs import DocsClient, require_docs
+
+        require_docs()  # helpful error before touching keys
+        _docs = DocsClient()
+    return _docs
+
+
+def _json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, default=lambda o: o.model_dump(mode="json"))
 
 
 @mcp.tool()
@@ -51,8 +67,7 @@ def classify(state: Any, questions: dict[str, Any]) -> str:
     Returns JSON: {"model", "answers", "usage", "evaluation_time_ms", "latency_ms", "request_id"}.
     Choose your own threshold on the probabilities rather than treating them as a verdict.
     """
-    result = _get_client().classify(state, questions)
-    return json.dumps(result, ensure_ascii=False)
+    return _json(_get_client().classify(state, questions))
 
 
 @mcp.tool()
@@ -81,9 +96,8 @@ def ask(
     elif kind == "choice":
         q = presets.choice(question, options or {"yes": None, "no": None})
     else:
-        return json.dumps({"error": f"unknown kind '{kind}': use noul, score or choice"})
-    result = _get_client().classify(state, q)
-    return json.dumps(result, ensure_ascii=False)
+        return _json({"error": f"unknown kind '{kind}': use noul, score or choice"})
+    return _json(_get_client().classify(state, q))
 
 
 @mcp.tool()
@@ -91,8 +105,49 @@ def list_models() -> str:
     """List the Drex decision models available to this account, for choosing a
     model (drex-latest is the default). Works at any balance, so it also
     serves as a key health check."""
-    result = _get_client().models()
-    return json.dumps(result, ensure_ascii=False)
+    return _json(_get_client().models())
+
+
+@mcp.tool()
+def parse_document(url: str, wait: float = 120, output_format: str = "markdown") -> str:
+    """Parse a document (PDF, DOCX, XLSX, ...) from an https URL into Markdown,
+    text or layout blocks. Needs the "docs" extra installed server-side.
+
+    Args:
+        url: https URL of the document; its last path segment must have a file extension.
+        wait: seconds to hold the call until the job finishes (poll continues server-side).
+        output_format: "markdown", "text" or "layout".
+
+    Returns JSON of the finished job; markdown is in result.document.markdown.
+    """
+    docs = _get_docs()
+    job = docs.parse(url, output={"formats": [output_format]}, wait=wait)
+    return _json(job.model_dump(mode="json"))
+
+
+@mcp.tool()
+def extract_data(url: str, schema: dict[str, Any], instructions: str | None = None, wait: float = 120) -> str:
+    """Extract structured fields from a document at an https URL, matching a
+    JSON Schema. Needs the "docs" extra installed server-side.
+
+    Args:
+        url: https URL of the document.
+        schema: JSON Schema object describing the fields to extract, e.g.
+            {"type": "object", "properties": {"total": {"type": "number"}, "vendor": {"type": "string"}}}.
+        instructions: optional extra guidance for the extractor.
+        wait: seconds to hold the call until the job finishes.
+
+    Returns JSON of the finished job; fields are in result.fields.
+    """
+    docs = _get_docs()
+    job = docs.extract(url, schema=schema, instructions=instructions, wait=wait)
+    return _json(job.model_dump(mode="json"))
+
+
+@mcp.tool()
+def get_document_job(job_id: str) -> str:
+    """Fetch the current state of a document job by id (status, result, error)."""
+    return _json(_get_docs().job(job_id).model_dump(mode="json"))
 
 
 def main() -> None:

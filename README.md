@@ -15,11 +15,11 @@ English | [简体中文](docs/readme/README.zh-CN.md)
 ## Contents
 
 - [Why this exists](#why-this-exists)
-- [Requirements](#requirements)
 - [Quick start](#quick-start)
 - [How it works](#how-it-works)
 - [Comparison with the official SDK](#comparison-with-the-official-sdk)
 - [Question types](#question-types)
+- [Document pipeline](#document-pipeline)
 - [MCP for agents](#mcp-for-agents)
 - [CLI](#cli)
 - [FAQ](#faq)
@@ -28,22 +28,17 @@ English | [简体中文](docs/readme/README.zh-CN.md)
 
 ## Why this exists
 
-Drex answers typed questions about any text or JSON with calibrated probabilities — great for routing tickets, triaging issues, grading replies. The official `nace-sdk` wraps the whole API; nace-kit wraps the **operations** around the classification endpoint:
+Drex answers typed questions about any text or JSON with calibrated probabilities — great for routing tickets, triaging issues, grading replies. The official `nace-sdk` wraps the whole API; nace-kit wraps the **operations** around it:
 
 - **Key pool** — several API keys work as one. A dead key (401) or an exhausted quota (429) fails over to the next key mid-request.
 - **Response cache** — Drex answers are deterministic, so identical requests are served from an LRU cache instead of billed again.
 - **Usage metering** — calls and tokens, per key, always visible in `client.usage`.
-- **Presets** — `urgency()`, `sentiment()`, `severity()`, `priority()` out of the box, plus builders for all three question types.
-
-If you need the document pipeline (upload / parse / extract / jobs), use the official SDK — nace-kit only touches `/v1/systemone` and `/v1/models`, so both can coexist.
-
-## Requirements
-
-- Python **3.10+**, any platform (Windows / macOS / Linux — pure-Python wheel, no compiled extensions)
-- One or more nace.ai API keys (`nace_sk_…`, from the [console](https://console.nace.ai))
-- No other prerequisites: `httpx` + `mcp` are the only dependencies
+- **Presets & typed answers** — `urgency()`, `sentiment()`, `severity()`, `priority()` out of the box; pydantic questions and responses throughout.
+- **Document pipeline** — parse / extract / ground over the official SDK with the same key pool (`[docs]` extra).
 
 ## Quick start
+
+Requires Python 3.11+ (Windows / macOS / Linux) and one or more API keys from the [console](https://console.nace.ai).
 
 ```bash
 pip install nace-kit        # or: uv add nace-kit / uvx nace-kit for one-off use
@@ -57,7 +52,7 @@ client = NaceClient()  # defaults to drex-latest
 
 # binary question -> probability of yes
 r = client.classify("Help! My payouts have been failing for 3 days.", presets.urgency())
-r["answers"]["is_urgent"]["noul"]       # 0.7161
+r.answers["is_urgent"].noul             # 0.7161
 
 # state can be any JSON; questions batch into ONE request
 r = client.classify(
@@ -81,22 +76,19 @@ Async works the same: `from nace_kit import AsyncNaceClient`.
 | 408 / 5xx / network / timeout | retry the same key — exponential backoff + jitter, `Retry-After` aware, 30 s total budget — then rotate |
 | 4xx (payload rejected) | raise immediately, no retries (`NaceBadRequest`) |
 
-Keys are validated at construction (`nace_sk_` + 43 chars), so a truncated copy fails at startup, not on the first request. Retries (`max_retries`, `backoff_*`, `retry_budget`), cache size and timeouts are all constructor parameters.
+Keys are validated at construction (`nace_sk_` + 43 chars); retries (`max_retries`, `backoff_*`, `retry_budget`), cache size and timeouts are constructor parameters.
 
 ## Comparison with the official SDK
 
 | | official `nace-sdk` | `nace-kit` |
 |---|---|---|
-| Classification (`/v1/systemone`): noul / choice / score | ✅ | ✅ |
-| `state` as any JSON, ≤512 questions per call | ✅ | ✅ |
+| Classification API (all three question types, any-JSON `state`, models listing, typed objects) | ✅ | ✅ |
 | **Multi-key pool with failover** | ❌ single key | ✅ |
 | **LRU response cache** | ❌ | ✅ |
 | **Per-key usage metering** | ❌ | ✅ |
 | Backoff retries, `Retry-After`, budget | ✅ | ✅ (combined with rotation) |
 | Question presets | ❌ | ✅ |
-| Models listing, `drex-latest` default | ✅ | ✅ |
-| Document pipeline (upload/parse/extract/jobs) | ✅ | ❌ — use the official SDK |
-| Typed (pydantic) request/response objects | ✅ | ❌ plain dicts |
+| Document pipeline (upload/parse/extract/jobs) | ✅ | ✅ via the official SDK (`[docs]` extra) |
 | `nace login` credential file | ✅ | ❌ env vars |
 | CLI + MCP server in one package | ❌ separate `nace-mcp` | ✅ |
 
@@ -118,6 +110,25 @@ p.score("How angry?", ["calm", "annoyed", "angry", "furious"])
 
 Pick your own threshold on the probabilities rather than treating them as a verdict.
 
+## Document pipeline
+
+The document operations wrap the official `nace-sdk` (MIT) — their API surface, our key pool on top:
+
+```bash
+pip install "nace-kit[docs]"
+```
+
+```python
+from nace_kit import DocsClient
+
+docs = DocsClient()   # same NACE_API_KEYS pool; rotates on 401/429
+job = docs.parse("https://example.com/report.pdf",
+                 output={"formats": ["markdown"]}, wait=120)
+job.result["document"]["markdown"]
+```
+
+`parse` / `split` / `classify_document` / `extract` / `ground` create jobs and (with `wait`) poll them to completion; `docs.job(id)`, `docs.wait(id)`, `docs.jobs()` manage them afterwards. Every create is idempotency-keyed, so a key rotation mid-call never bills a second job. `AsyncDocsClient` mirrors everything.
+
 ## MCP for agents
 
 One registration, every project. ZCode (`~/.zcode/cli/config.json` → `mcp.servers`):
@@ -131,15 +142,11 @@ One registration, every project. ZCode (`~/.zcode/cli/config.json` → `mcp.serv
 }
 ```
 
-Claude Desktop / Cursor: same shape under `mcpServers` (use `uvx nace-kit-mcp` or `"command": "uv", "args": ["--directory", "/path/to/nace-kit", "run", "nace-kit-mcp"]`).
+Claude Desktop / Cursor: same shape under `mcpServers`.
 
-Tools:
+Tools: `classify` (full batch interface), `ask` (single question over noul / score / choice), `list_models`, and — with the `[docs]` extra installed — `parse_document`, `extract_data`, `get_document_job`.
 
-- `classify(state, questions)` — full batch interface (question shapes in the tool docstring)
-- `ask(state, question, kind, levels?, options?)` — single-question convenience over noul / score / choice
-- `list_models()` — available models + key health check
-
-Keys live only in the config/env, never in this repo.
+Prefer a skill? `nace-kit --install-skill` copies an [Agent Skill](https://agentskills.io) (`SKILL.md`) to `~/.agents/skills/` (or `--claude` for `~/.claude/skills/`), so agents get usage guidance — question phrasing, batching, thresholds — even without the MCP registration.
 
 ## CLI
 
@@ -152,31 +159,22 @@ nace-kit --models
 
 ## FAQ
 
-**The official SDK exists — why use this?**
-For the key pool (failover + quota spreading), the response cache, per-key metering and presets. For document jobs, use the official SDK; both can be installed side by side.
-
-**Is the `choice` type broken?**
-No — it needs `criteria` as a mapping `{label: description}`, not a list or a string. Earlier community reports of it being broken used the wrong shape.
-
 **Is the cache safe?**
-Drex answers are deterministic for identical input (same model, state, questions), so caching is exact, not approximate. Pass `cache_size=0` to disable.
+Drex answers are deterministic for identical input (same model, state, questions), so caching is exact. Pass `cache_size=0` to disable.
 
 **Which model does it call?**
-`drex-latest` by default, which nace.ai moves forward on announced dates; pin with `NaceClient(model="drex-v2.0")` if you need reproducibility. `client.models()` lists what the account can call.
-
-**Does it work on Windows?**
-Yes — development happens on Windows, and CI runs the test suite on Windows, macOS and Linux. The wheel is pure Python (`py3-none-any`).
+`drex-latest` by default, which nace.ai moves forward on announced dates; pin with `NaceClient(model="drex-v2.0")` if you need reproducibility.
 
 **Where do keys go?**
-`NACE_API_KEYS` (comma-separated pool) or `NACE_API_KEY`. For agents, put them in the MCP server's `env` block. Never in code or in this repo.
+`NACE_API_KEYS` (comma-separated pool) or `NACE_API_KEY`. For agents, put them in the MCP server's `env` block. Never in code.
 
 ## Contributing
 
-Issues and PRs are welcome at [lincong1987/nace-kit](https://github.com/lincong1987/nace-kit). Development:
+Issues and PRs are welcome at [lincong1987/nace-kit](https://github.com/lincong1987/nace-kit).
 
 ```bash
 uv sync            # httpx, mcp, pytest
-uv run pytest -q   # unit tests, mocked transport — no network or keys needed
+uv run pytest -q   # unit tests — no network or keys needed
 ```
 
 ## License

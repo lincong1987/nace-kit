@@ -33,6 +33,8 @@ from typing import Any
 
 import httpx
 
+from .types import Choice, ClassifyResult, ModelsResult, Noul, Score
+
 DEFAULT_BASE_URL = "https://console.nace.ai/v1"
 DEFAULT_MODEL = "drex-latest"
 VALID_TYPES = ("noul", "choice", "score")
@@ -80,31 +82,41 @@ def default_keys() -> list[str]:
 
 
 def normalize_questions(questions: Any) -> dict[str, dict[str, Any]]:
-    """Accept a ``{name: question}`` mapping, a single question, or a list.
-
-    Builders in :mod:`nace_kit.presets` return questions carrying a ``name``
-    key; plain upstream-format dicts are also accepted (name defaults to
-    ``"answer"``).
+    """Accept typed questions (:class:`nace_kit.types.Noul` / `Choice` / `Score`),
+    a ``{name: question}`` mapping, a single question, or a list — mixed forms
+    welcome. Returns the wire format ``{name: question-json}`` (name defaults
+    to ``"answer"``).
     """
+    def split(item: Any) -> tuple[str, dict[str, Any]]:
+        if isinstance(item, (Noul, Choice, Score)):
+            return (item.name or "answer"), item.wire()
+        q = dict(item)
+        if "type" not in q:
+            raise NaceBadRequest(f"question missing 'type': {q!r}")
+        return (q.pop("name", None) or "answer"), q
+
+    if isinstance(questions, (Noul, Choice, Score)):
+        name, wire = split(questions)
+        return {name: wire}
     if isinstance(questions, Mapping):
-        if "type" in questions:
-            q = dict(questions)
-            name = q.pop("name", None) or "answer"
-            return {name: q}
-        return json.loads(json.dumps(dict(questions)))  # deep copy, json-safe
-    if isinstance(questions, (list, tuple)):
+        if "type" in questions or isinstance(questions, (Noul, Choice, Score)):
+            name, wire = split(questions)
+            return {name: wire}
         out: dict[str, dict[str, Any]] = {}
+        for name, item in questions.items():
+            wire = item.wire() if isinstance(item, (Noul, Choice, Score)) else dict(item)
+            out[str(name)] = wire
+        return out
+    if isinstance(questions, (list, tuple)):
+        out = {}
         for item in questions:
-            q = dict(item)
-            if "type" not in q:
-                raise NaceBadRequest(f"question missing 'type': {q!r}")
-            name = q.pop("name", None) or "answer"
+            name, wire = split(item)
             base = name
             i = 2
             while name in out:
                 name = f"{base}_{i}"
                 i += 1
-            out[name] = q
+            out[name] = wire
         return out
     raise NaceBadRequest(f"unsupported questions format: {type(questions).__name__}")
 
@@ -258,21 +270,21 @@ class _Base:
 class NaceClient(_Base):
     """Synchronous client."""
 
-    def classify(self, state: Any, questions: Any) -> dict[str, Any]:
+    def classify(self, state: Any, questions: Any) -> ClassifyResult:
         """Classify ``state`` (any JSON value — text, an object, a list) with
-        up to 512 batched questions; returns the upstream JSON plus
-        ``latency_ms``."""
+        up to 512 batched questions; returns a typed
+        :class:`nace_kit.types.ClassifyResult` (``.model_dump()`` for a dict)."""
         payload = self._payload(state, questions)
         cache_key = json.dumps(payload, sort_keys=True, ensure_ascii=False)
         hit = self._cache_get(cache_key)
         if hit is not None:
-            return hit
-        return self._send("POST", "/systemone", payload, cache_key)
+            return ClassifyResult.model_validate(hit)
+        return ClassifyResult.model_validate(self._send("POST", "/systemone", payload, cache_key))
 
-    def models(self) -> dict[str, Any]:
+    def models(self) -> ModelsResult:
         """List the decision models the account can call (works at any balance;
-        handy as a key health check). Returns the upstream JSON plus ``latency_ms``."""
-        return self._send("GET", "/models", None, None)
+        handy as a key health check)."""
+        return ModelsResult.model_validate(self._send("GET", "/models", None, None))
 
     def _send(
         self,
@@ -336,16 +348,16 @@ class NaceClient(_Base):
 class AsyncNaceClient(_Base):
     """Async client; same behaviour as :class:`NaceClient`."""
 
-    async def classify(self, state: Any, questions: Any) -> dict[str, Any]:
+    async def classify(self, state: Any, questions: Any) -> ClassifyResult:
         payload = self._payload(state, questions)
         cache_key = json.dumps(payload, sort_keys=True, ensure_ascii=False)
         hit = self._cache_get(cache_key)
         if hit is not None:
-            return hit
-        return await self._send("POST", "/systemone", payload, cache_key)
+            return ClassifyResult.model_validate(hit)
+        return ClassifyResult.model_validate(await self._send("POST", "/systemone", payload, cache_key))
 
-    async def models(self) -> dict[str, Any]:
-        return await self._send("GET", "/models", None, None)
+    async def models(self) -> ModelsResult:
+        return ModelsResult.model_validate(await self._send("GET", "/models", None, None))
 
     async def _send(
         self,
