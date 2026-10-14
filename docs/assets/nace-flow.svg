@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 520" width="100%" height="100%" style="background:#0d1117; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; border-radius:12px;">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="grad-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+    <linearGradient id="grad-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <linearGradient id="grad-green" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="grad-amber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="box-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#161b22" />
+      <stop offset="100%" stop-color="#0e131a" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Title & Subtitle -->
+  <text x="550" y="42" fill="#f0f6fc" font-size="20" font-weight="700" text-anchor="middle" letter-spacing="0.5">nace-kit 架构与工作流全景图</text>
+  <text x="550" y="66" fill="#8b949e" font-size="12" text-anchor="middle">多 Key 自动故障转移 · 本地 0.08ms 确定性缓存 · 多题批量聚合 · MCP / CLI / Python 三端统一</text>
+
+  <!-- Left: Inputs -->
+  <g transform="translate(40, 95)">
+    <rect width="250" height="380" rx="10" fill="url(#box-bg)" stroke="#30363d" stroke-width="1.5" />
+    <rect width="250" height="36" rx="10" fill="#21262d" />
+    <path d="M0 26 h250 v10 h-250 z" fill="#21262d" />
+    <circle cx="20" cy="18" r="5" fill="#f87171" />
+    <circle cx="36" cy="18" r="5" fill="#fbbf24" />
+    <circle cx="52" cy="18" r="5" fill="#34d399" />
+    <text x="140" y="23" fill="#e6edf3" font-size="13" font-weight="600" text-anchor="middle">1. 调用发起方 (Inputs)</text>
+
+    <!-- Source 1: Agents -->
+    <g transform="translate(15, 55)">
+      <rect width="220" height="68" rx="8" fill="#1c2128" stroke="#388bfd" stroke-width="1.2" />
+      <text x="14" y="24" fill="#58a6ff" font-size="13" font-weight="700">🤖 AI 智能体 (MCP / Skill)</text>
+      <text x="14" y="44" fill="#8b949e" font-size="11">Claude Code · Antigravity · Cursor</text>
+      <text x="14" y="58" fill="#6e7681" font-size="10">一键集成，自动挂载预设与工具</text>
+    </g>
+
+    <!-- Source 2: Python Code -->
+    <g transform="translate(15, 138)">
+      <rect width="220" height="68" rx="8" fill="#1c2128" stroke="#a371f7" stroke-width="1.2" />
+      <text x="14" y="24" fill="#bc8cff" font-size="13" font-weight="700">🐍 Python 业务后端</text>
+      <text x="14" y="44" fill="#8b949e" font-size="11">FastAPI · Celery · Django · 异步支持</text>
+      <text x="14" y="58" fill="#6e7681" font-size="10">NaceClient / AsyncNaceClient</text>
+    </g>
+
+    <!-- Source 3: CLI -->
+    <g transform="translate(15, 221)">
+      <rect width="220" height="68" rx="8" fill="#1c2128" stroke="#3fb950" stroke-width="1.2" />
+      <text x="14" y="24" fill="#3fb950" font-size="13" font-weight="700">⚡ 命令行工具 (CLI)</text>
+      <text x="14" y="44" fill="#8b949e" font-size="11">终端即时调用 / CI/CD 自动化</text>
+      <text x="14" y="58" fill="#6e7681" font-size="10">uvx nace-kit "待分类文本"</text>
+    </g>
+
+    <!-- Payload Info -->
+    <g transform="translate(15, 304)">
+      <rect width="220" height="60" rx="8" fill="#161b22" stroke="#30363d" stroke-dasharray="3,3" />
+      <text x="14" y="24" fill="#e6edf3" font-size="11" font-weight="600">📦 支持载荷格式：</text>
+      <text x="14" y="44" fill="#7ee787" font-size="11">任意长文本 (Text) · 结构化 JSON</text>
+    </g>
+  </g>
+
+  <!-- Flow Arrow 1 -->
+  <g transform="translate(290, 270)">
+    <path d="M 5 0 L 45 0" stroke="url(#grad-blue)" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+    <circle cx="25" cy="0" r="4" fill="#38bdf8" filter="url(#glow)" />
+  </g>
+
+  <!-- Center: nace-kit Core Engine -->
+  <g transform="translate(345, 95)">
+    <rect width="410" height="380" rx="10" fill="url(#box-bg)" stroke="#58a6ff" stroke-width="2" />
+    <rect width="410" height="36" rx="10" fill="#1f2937" />
+    <path d="M0 26 h410 v10 h-410 z" fill="#1f2937" />
+    <text x="205" y="23" fill="#79c0ff" font-size="14" font-weight="700" text-anchor="middle">⚙️ nace-kit 生产级运维护航层</text>
+
+    <!-- Engine 1: Key Pool & Failover -->
+    <g transform="translate(15, 52)">
+      <rect width="380" height="74" rx="8" fill="#1c2128" stroke="#30363d" />
+      <text x="15" y="24" fill="#58a6ff" font-size="13" font-weight="700">🔑 智能多 Key 池与零停机故障转移</text>
+      <text x="15" y="44" fill="#e6edf3" font-size="11">遇到 401 (失效) 或 429 (配额超限) ➔ <tspan fill="#3fb950" font-weight="bold">毫秒级自动切入下个 Key</tspan></text>
+      <text x="15" y="62" fill="#8b949e" font-size="10">指数退避 + 抖动 + Retry-After 预算保护 · client.usage 按 Key 独立计费统计</text>
+    </g>
+
+    <!-- Engine 2: LRU Cache -->
+    <g transform="translate(15, 134)">
+      <rect width="380" height="74" rx="8" fill="#1c2128" stroke="#30363d" />
+      <text x="15" y="24" fill="#3fb950" font-size="13" font-weight="700">⚡ 本地确定性 LRU 缓存 (0.08ms)</text>
+      <text x="15" y="44" fill="#e6edf3" font-size="11">相同输入命中缓存：耗时从 1800ms ➔ <tspan fill="#38bdf8" font-weight="bold">0.08ms</tspan>，<tspan fill="#e3b341" font-weight="bold">$0 账单</tspan></text>
+      <text x="15" y="62" fill="#8b949e" font-size="10">基于 input hash 确定性对齐，完全杜绝智能体调试与回归测试中的重复计费</text>
+    </g>
+
+    <!-- Engine 3: Batch Combiner -->
+    <g transform="translate(15, 216)">
+      <rect width="380" height="74" rx="8" fill="#1c2128" stroke="#30363d" />
+      <text x="15" y="24" fill="#bc8cff" font-size="13" font-weight="700">📦 请求聚合器 (Multi-Question Batching)</text>
+      <text x="15" y="44" fill="#e6edf3" font-size="11">支持最多 <tspan fill="#f0883e" font-weight="bold">512 个问题</tspan> 自动压缩打包为 <tspan fill="#58a6ff" font-weight="bold">单次 HTTP 请求</tspan></text>
+      <text x="15" y="62" fill="#8b949e" font-size="10">同时询问紧急度、严重等级、业务归类，节省成倍的网络往返与握手开销</text>
+    </g>
+
+    <!-- Engine 4: Presets & Docs Pipeline -->
+    <g transform="translate(15, 298)">
+      <rect width="380" height="68" rx="8" fill="#1c2128" stroke="#30363d" />
+      <text x="15" y="22" fill="#f0883e" font-size="13" font-weight="700">🎯 内置类型化预设 &amp; 文档解析管线</text>
+      <text x="15" y="42" fill="#8b949e" font-size="11">预置：urgency() · severity() · priority() · sentiment()</text>
+      <text x="15" y="58" fill="#8b949e" font-size="11">文档：[docs] PDF/Word 转 Markdown 与结构化抽取 (带幂等防护)</text>
+    </g>
+  </g>
+
+  <!-- Flow Arrow 2 -->
+  <g transform="translate(755, 270)">
+    <path d="M 5 0 L 45 0" stroke="url(#grad-purple)" stroke-width="3" fill="none" />
+    <circle cx="25" cy="0" r="4" fill="#a855f7" filter="url(#glow)" />
+  </g>
+
+  <!-- Right: Upstream Drex & Output -->
+  <g transform="translate(810, 95)">
+    <rect width="250" height="380" rx="10" fill="url(#box-bg)" stroke="#30363d" stroke-width="1.5" />
+    <rect width="250" height="36" rx="10" fill="#21262d" />
+    <path d="M0 26 h250 v10 h-250 z" fill="#21262d" />
+    <text x="125" y="23" fill="#e6edf3" font-size="13" font-weight="600" text-anchor="middle">3. 决策输出与业务联动</text>
+
+    <!-- Drex Upstream -->
+    <g transform="translate(15, 50)">
+      <rect width="220" height="60" rx="8" fill="#1c2128" stroke="#8957e5" stroke-width="1.2" />
+      <text x="14" y="24" fill="#d2a8ff" font-size="12" font-weight="700">🧠 nace.ai Drex Engine</text>
+      <text x="14" y="42" fill="#8b949e" font-size="10">drex-latest (混合专家 3B 活跃)</text>
+      <text x="14" y="54" fill="#3fb950" font-size="10">服务端推理：约 47ms</text>
+    </g>
+
+    <!-- Calibrated Outputs -->
+    <g transform="translate(15, 122)">
+      <rect width="220" height="154" rx="8" fill="#161b22" stroke="#30363d" />
+      <text x="14" y="22" fill="#f0f6fc" font-size="12" font-weight="700">📊 校准概率返回 (Calibrated)</text>
+
+      <g transform="translate(12, 35)">
+        <text x="0" y="12" fill="#58a6ff" font-size="11" font-weight="bold">noul (二元判断):</text>
+        <text x="110" y="12" fill="#7ee787" font-size="11" font-family="monospace">0.8235 (82%)</text>
+        <rect x="0" y="18" width="190" height="4" rx="2" fill="#21262d" />
+        <rect x="0" y="18" width="156" height="4" rx="2" fill="#38bdf8" />
+      </g>
+
+      <g transform="translate(12, 70)">
+        <text x="0" y="12" fill="#bc8cff" font-size="11" font-weight="bold">choice (标签分类):</text>
+        <text x="110" y="12" fill="#e3b341" font-size="11" font-family="monospace">billing (60%)</text>
+        <rect x="0" y="18" width="190" height="4" rx="2" fill="#21262d" />
+        <rect x="0" y="18" width="114" height="4" rx="2" fill="#a855f7" />
+      </g>
+
+      <g transform="translate(12, 105)">
+        <text x="0" y="12" fill="#f0883e" font-size="11" font-weight="bold">score (有序评分):</text>
+        <text x="110" y="12" fill="#f87171" font-size="11" font-family="monospace">2.26 / 3.0</text>
+        <rect x="0" y="18" width="190" height="4" rx="2" fill="#21262d" />
+        <rect x="0" y="18" width="142" height="4" rx="2" fill="#f0883e" />
+      </g>
+    </g>
+
+    <!-- Automation Action -->
+    <g transform="translate(15, 290)">
+      <rect width="220" height="74" rx="8" fill="#1c2128" stroke="#238636" stroke-width="1.2" />
+      <text x="14" y="22" fill="#3fb950" font-size="12" font-weight="700">🚀 自动化落地动作</text>
+      <text x="14" y="40" fill="#8b949e" font-size="10">工单秒级自动路由到财务组</text>
+      <text x="14" y="54" fill="#8b949e" font-size="10">触发 P1 故障群电话与企微告警</text>
+      <text x="14" y="68" fill="#8b949e" font-size="10">驱动 AI 智能体分支决策</text>
+    </g>
+  </g>
+
+  <!-- Bottom Bar: Zero config & Status -->
+  <g transform="translate(40, 485)">
+    <text x="510" y="18" fill="#484f58" font-size="11" text-anchor="middle">MIT License · Python 3.11+ · Powered by nace.ai Drex API · Compatible with Claude Code / Cursor / Codex / Antigravity</text>
+  </g>
+</svg>
