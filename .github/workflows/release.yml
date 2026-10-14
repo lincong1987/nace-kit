@@ -1,0 +1,30 @@
+name: Release
+
+# Push a tag (v0.2.0) to run tests, publish to PyPI and create a GitHub Release.
+# PyPI auth uses Trusted Publishing: configure the "pending publisher" once at
+# https://pypi.org/manage/account/publishing/ (owner: lincong1987, repository:
+# nace-kit, workflow: release.yml, environment: empty) — no API token needed.
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # PyPI Trusted Publishing
+      contents: write # GitHub Release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync
+      - run: uv run pytest -q
+      - run: uv build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

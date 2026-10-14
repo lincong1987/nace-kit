@@ -1,0 +1,33 @@
+[project]
+name = "nace-kit"
+version = "0.2.0"
+description = "Community toolkit for the nace.ai Drex API: multi-key client with caching and metering, presets, CLI and MCP server"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.27",
+    "mcp>=1.2",
+]
+
+[project.urls]
+Repository = "https://github.com/lincong1987/nace-kit"
+Issues = "https://github.com/lincong1987/nace-kit/issues"
+Changelog = "https://github.com/lincong1987/nace-kit/releases"
+
+[project.scripts]
+nace-kit = "nace_kit.cli:main"
+nace-kit-mcp = "nace_kit.mcp_server:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nace_kit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
